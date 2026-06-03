@@ -4,14 +4,14 @@ import {
   Button,
   Layout,
   Menu,
-  Modal,
   Space,
   Spin,
   Typography,
 } from 'antd';
 import {
   DashboardOutlined,
-  LogoutOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   SearchOutlined,
   SettingOutlined,
   UserOutlined,
@@ -20,7 +20,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { clearSession, getStoredToken, getStoredUser, labelForRole, saveSession, tokenFromLoginData, canManageSystem } from './auth';
-import { getCurrentUser, login, logout } from './api';
+import { getCurrentUser, login } from './api';
 import type { User } from './types';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -33,9 +33,9 @@ function AppShell() {
   const [token, setToken] = useState(getStoredToken());
   const [user, setUser] = useState<User | null>(getStoredUser());
   const [booting, setBooting] = useState(Boolean(getStoredToken()));
+  const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { message } = AntApp.useApp();
 
   useEffect(() => {
     if (!token) {
@@ -85,23 +85,6 @@ function AppShell() {
     navigate('/dashboard', { replace: true });
   }
 
-  function handleLogout() {
-    Modal.confirm({
-      title: '退出登录',
-      content: '关闭当前会话并返回登录界面。',
-      okText: '退出',
-      cancelText: '取消',
-      onOk: async () => {
-        await logout().catch(() => undefined);
-        clearSession();
-        setToken(null);
-        setUser(null);
-        message.success('已退出登录');
-        navigate('/login', { replace: true });
-      },
-    });
-  }
-
   if (booting) {
     return (
       <div className="screen-center">
@@ -121,7 +104,13 @@ function AppShell() {
 
   return (
     <Layout className="app-layout">
-      <Sider width={232} className="app-sider">
+      <Sider
+        width={232}
+        collapsedWidth={76}
+        collapsed={collapsed}
+        trigger={null}
+        className={`app-sider ${collapsed ? 'is-collapsed' : ''}`}
+      >
         <div className="brand-block">
           <div className="brand-mark">XY</div>
           <div>
@@ -139,16 +128,21 @@ function AppShell() {
       </Sider>
       <Layout>
         <Header className="app-header">
-          <Typography.Text className="header-title">检测数据监控与管理平台</Typography.Text>
+          <Space size={12}>
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed((value) => !value)}
+              className="sider-toggle"
+            />
+            <Typography.Text className="header-title">检测数据监控与管理平台</Typography.Text>
+          </Space>
           <Space size={12}>
             <Avatar icon={<UserOutlined />} />
             <div className="user-meta">
               <strong>{user?.nickName || user?.username}</strong>
               <span>{labelForRole(user?.roleCode)}</span>
             </div>
-            <Button icon={<LogoutOutlined />} onClick={handleLogout}>
-              退出
-            </Button>
           </Space>
         </Header>
         <Content className="app-content">

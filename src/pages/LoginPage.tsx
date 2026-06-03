@@ -31,9 +31,6 @@ export default function LoginPage({ onSubmit }: LoginPageProps) {
         </div>
         <div className="login-copy">
           <Typography.Title>高密翔宇螺纹孔检测系统</Typography.Title>
-          <Typography.Paragraph>
-            实时监测产品型号、孔位检测、图像识别结果和硬件状态，按用户权限完成查询、导出与系统管理。
-          </Typography.Paragraph>
         </div>
       </div>
       <Card className="login-card">
