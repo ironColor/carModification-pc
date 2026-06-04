@@ -72,89 +72,89 @@ export default function DashboardPage(_props: DashboardPageProps) {
 
   return (
     <div className="machine-dashboard">
-      <section className="dashboard-hero">
-        <div className="dashboard-identity">
-          <span>当前型号</span>
-          <strong>{dashboardSnapshot.model}</strong>
-          <span>{dashboardSnapshot.workpiece}</span>
-        </div>
-
-        <div className={`dashboard-run-card ${running ? 'is-running' : ''}`}>
-          <div>
-            <span>设备状态</span>
-            <strong>{running ? '运行中' : '待启动'}</strong>
-          </div>
-          <Button
-            className={`start-button ${running ? 'is-running' : ''}`}
-            icon={<PoweroffOutlined />}
-            onClick={handleStart}
-          >
-            {running ? '停止' : '开始'}
-          </Button>
-        </div>
-
-        <div className="dashboard-focus-card">
-          <span>当前报警类型</span>
-          <strong>{dashboardSnapshot.alarmType}</strong>
-        </div>
-      </section>
-
       <div className="machine-layout">
-        <section className="machine-left">
-          <div className="panel system-status-panel">
-            <div className="panel-title-row">
-              <span>系统状态</span>
-              <strong>
-                {onlineCount}/{dashboardSnapshot.statusRows.length}
-              </strong>
+        <main className="machine-workspace">
+          <section className="machine-left">
+            <div className={`dashboard-run-card ${running ? 'is-running' : ''}`}>
+              <div>
+                <span>设备状态</span>
+                <strong>{running ? '运行中' : '待启动'}</strong>
+              </div>
+              <Button
+                className={`start-button ${running ? 'is-running' : ''}`}
+                icon={<PoweroffOutlined />}
+                onClick={handleStart}
+              >
+                {running ? '停止' : '开始'}
+              </Button>
             </div>
-            <div className="status-list">
-              {dashboardSnapshot.statusRows.map((item) => (
-                <div className="status-line" key={item.label}>
-                  <span className={`status-dot ${item.ok ? 'ok' : 'offline'}`} />
-                  <span>{item.label}</span>
-                  <strong className={item.ok ? 'ok' : 'offline'}>{item.ok ? '正常' : '离线'}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="panel stats-panel">
-            <div className="panel-title-row">
-              <span>生产统计</span>
+            <div className="panel system-status-panel">
+              <div className="panel-title-row">
+                <span>系统状态</span>
+                <strong>
+                  {onlineCount}/{dashboardSnapshot.statusRows.length}
+                </strong>
+              </div>
+              <div className="status-list">
+                {dashboardSnapshot.statusRows.map((item) => (
+                  <div className="status-line" key={item.label}>
+                    <span className={`status-dot ${item.ok ? 'ok' : 'offline'}`} />
+                    <span>{item.label}</span>
+                    <strong className={item.ok ? 'ok' : 'offline'}>{item.ok ? '正常' : '离线'}</strong>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="stat-dashboard-grid">
-              {dashboardSnapshot.stats.map((item) => (
-                <div className={item.label === '良品率' ? 'stat-box highlight' : 'stat-box'} key={item.label}>
-                  <span>{item.label}</span>
-                  <strong>{item.value}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="machine-center">
-          <div className="panel workpiece-panel">
-            <div className="panel-title-row">
-              <span>当前工件</span>
-              <strong>
-                面 {dashboardSnapshot.face} / 孔 {dashboardSnapshot.hole}
-              </strong>
+          <section className="machine-info">
+            <div className="machine-top-grid">
+              <div className="panel model-panel">
+                <span>型号：</span>
+                <strong>{dashboardSnapshot.model}</strong>
+              </div>
+
+              <div className="panel workpiece-panel">
+                <div className="panel-title-row">
+                  <span>当前工件</span>
+                  <strong>
+                    面 {dashboardSnapshot.face} / 孔 {dashboardSnapshot.hole}
+                  </strong>
+                </div>
+                <div className="workpiece-value">{dashboardSnapshot.workpiece}</div>
+                <div className="workpiece-meta">
+                  <span>
+                    检测面<strong>{dashboardSnapshot.face}</strong>
+                  </span>
+                  <span>
+                    孔位<strong>{dashboardSnapshot.hole}</strong>
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="workpiece-value">{dashboardSnapshot.workpiece}</div>
-            <div className="workpiece-meta">
-              <span>
-                型号<strong>{dashboardSnapshot.model}</strong>
-              </span>
-              <span>
-                检测面<strong>{dashboardSnapshot.face}</strong>
-              </span>
-              <span>
-                孔位<strong>{dashboardSnapshot.hole}</strong>
-              </span>
+
+            <div className="machine-mid-grid">
+              <div className="panel stats-panel">
+                <div className="panel-title-row">
+                  <span>生产统计</span>
+                </div>
+                <div className="stat-dashboard-grid">
+                  {dashboardSnapshot.stats.map((item) => (
+                    <div className={item.label === '良品率' ? 'stat-box highlight' : 'stat-box'} key={item.label}>
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="panel dashboard-focus-card">
+                <span>当前报警类型</span>
+                <strong>{dashboardSnapshot.alarmType}</strong>
+              </div>
             </div>
-          </div>
+          </section>
 
           <div className="image-board">
             {dashboardSnapshot.imageCards.map((item) => (
@@ -173,7 +173,7 @@ export default function DashboardPage(_props: DashboardPageProps) {
               </div>
             ))}
           </div>
-        </section>
+        </main>
 
         <aside className="machine-right">
           <div className="panel holes-panel">
