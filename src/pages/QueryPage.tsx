@@ -9,7 +9,6 @@ import {
   Image,
   Input,
   Modal,
-  Popconfirm,
   Select,
   Space,
   Table,
@@ -200,17 +199,15 @@ export default function QueryPage({ user }: QueryPageProps) {
         fixed: 'right',
         render: (_, record) => (
           <Space>
-            <Button icon={<EyeOutlined />} onClick={() => openDetail(record)}>
-              详情
+            {/*<Button icon={<EyeOutlined />} onClick={() => openDetail(record)}>*/}
+            {/*  详情*/}
+            {/*</Button>*/}
+            {/*<Button icon={<FilePdfOutlined />} onClick={() => exportInspectionPdf(record.id)}>*/}
+            {/*  PDF*/}
+            {/*</Button>*/}
+            <Button danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>
+              删除
             </Button>
-            <Button icon={<FilePdfOutlined />} onClick={() => exportInspectionPdf(record.id)}>
-              PDF
-            </Button>
-            <Popconfirm title="确认删除该检测数据？" onConfirm={() => handleDelete(record)} okText="删除" cancelText="取消">
-              <Button danger icon={<DeleteOutlined />} disabled={!canEdit}>
-                删除
-              </Button>
-            </Popconfirm>
           </Space>
         ),
       },
@@ -230,8 +227,7 @@ export default function QueryPage({ user }: QueryPageProps) {
     <div className="page-stack">
       <div className="page-heading">
         <div>
-          <Typography.Title level={2}>数据查询导出界面</Typography.Title>
-          <Typography.Text type="secondary">支持型号、产品生产编号、检测结果和检测时间复合查询</Typography.Text>
+          <Typography.Title level={2}>数据查询</Typography.Title>
         </div>
         <Space>
           <Button icon={<FileExcelOutlined />} onClick={handleBatchExport}>

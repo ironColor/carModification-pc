@@ -19,7 +19,16 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { BrowserRouter } from 'react-router-dom';
-import { clearSession, getStoredToken, getStoredUser, labelForRole, saveSession, tokenFromLoginData, canManageSystem } from './auth';
+import {
+  clearPersistentStorage,
+  clearSession,
+  getStoredToken,
+  getStoredUser,
+  labelForRole,
+  saveSession,
+  tokenFromLoginData,
+  canManageSystem,
+} from './auth';
 import { getCurrentUser, login } from './api';
 import type { User } from './types';
 import LoginPage from './pages/LoginPage';
@@ -33,9 +42,18 @@ function AppShell() {
   const [token, setToken] = useState(getStoredToken());
   const [user, setUser] = useState<User | null>(getStoredUser());
   const [booting, setBooting] = useState(Boolean(getStoredToken()));
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    clearPersistentStorage();
+    const handlePageHide = () => {
+      clearPersistentStorage();
+    };
+    window.addEventListener('pagehide', handlePageHide);
+    return () => window.removeEventListener('pagehide', handlePageHide);
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -72,7 +90,6 @@ function AppShell() {
     if (!nextToken) {
       throw new Error('登录成功但未返回 token');
     }
-    localStorage.setItem('xy-login-username', values.username);
     saveSession(nextToken);
     setToken(nextToken);
     const nextUser = await getCurrentUser().catch(() => ({

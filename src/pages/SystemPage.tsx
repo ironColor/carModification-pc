@@ -10,7 +10,6 @@ import {
   Space,
   Table,
   Tag,
-  Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -18,7 +17,6 @@ import {
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
-  ReloadOutlined,
 } from '@ant-design/icons';
 import { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
@@ -157,8 +155,7 @@ export default function SystemPage({ user }: SystemPageProps) {
       },
       {
         title: '密码',
-        dataIndex: 'password',
-        render: () => '******',
+        dataIndex: 'password'
       },
       {
         title: '用户权限',
@@ -192,32 +189,6 @@ export default function SystemPage({ user }: SystemPageProps) {
 
   return (
     <div className="page-stack">
-      <div className="page-heading">
-        <div>
-          <Typography.Title level={2}>系统管理界面</Typography.Title>
-          <Typography.Text type="secondary">一级权限账户可进行通信测试和用户管理</Typography.Text>
-        </div>
-        <Button icon={<ReloadOutlined />} onClick={() => load()}>
-          刷新用户
-        </Button>
-      </div>
-
-      <Card title="通信测试按钮">
-        <Space wrap>
-          <Button type="primary" icon={<ApiOutlined />} loading={testing} onClick={handleCommunicationTest}>
-            通信测试
-          </Button>
-          {testResult &&
-            Object.entries(testResult).map(([name, value]) => {
-              const ok = typeof value === 'boolean' ? value : ['true', '1', 'ok', '正常', '已连接'].includes(String(value).toLowerCase());
-              return (
-                <Tag key={name} color={ok ? 'success' : 'error'}>
-                  {name}：{ok ? '正常' : '阻塞'}
-                </Tag>
-              );
-            })}
-        </Space>
-      </Card>
 
       <Card
         title="用户管理"
@@ -259,6 +230,23 @@ export default function SystemPage({ user }: SystemPageProps) {
         />
       </Card>
 
+      <Card title="通信测试按钮">
+        <Space wrap>
+          <Button type="primary" icon={<ApiOutlined />} loading={testing} onClick={handleCommunicationTest}>
+            通信测试
+          </Button>
+          {testResult &&
+              Object.entries(testResult).map(([name, value]) => {
+                const ok = typeof value === 'boolean' ? value : ['true', '1', 'ok', '正常', '已连接'].includes(String(value).toLowerCase());
+                return (
+                    <Tag key={name} color={ok ? 'success' : 'error'}>
+                      {name}：{ok ? '正常' : '阻塞'}
+                    </Tag>
+                );
+              })}
+        </Space>
+      </Card>
+
       <Modal
         title={editing ? '编辑用户' : '新增用户'}
         open={modalOpen}
@@ -279,9 +267,9 @@ export default function SystemPage({ user }: SystemPageProps) {
           >
             <Input.Password placeholder="请输入密码" />
           </Form.Item>
-          <Form.Item name="nickName" label="昵称">
-            <Input placeholder="昵称" />
-          </Form.Item>
+          {/*<Form.Item name="nickName" label="昵称">*/}
+          {/*  <Input placeholder="昵称" />*/}
+          {/*</Form.Item>*/}
           <Form.Item name="roleCode" label="用户权限" rules={[{ required: true, message: '请选择用户权限' }]}>
             <Select options={roleOptions.map((item) => ({ label: item.dictLabel, value: item.dictValue }))} />
           </Form.Item>
