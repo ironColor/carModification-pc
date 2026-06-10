@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "test:layout": "node scripts/check-dashboard-layout.mjs",
     "test:query": "node scripts/check-query-delete-permission.mjs",
+    "test:api": "node scripts/check-production-api-base-url.mjs",
     "test:session": "node scripts/check-session-storage.mjs",
     "test:sider": "node scripts/check-sider-default-collapsed.mjs",
     "test:system": "node scripts/check-system-page.mjs",

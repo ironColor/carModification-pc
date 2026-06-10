@@ -13,8 +13,11 @@ import type {
 export const TOKEN_KEY = 'xy-inspection-token';
 export const USER_KEY = 'xy-inspection-user';
 
+const PRODUCTION_API_BASE_URL = 'http://127.0.0.1:8081';
+const apiBaseURL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? PRODUCTION_API_BASE_URL : '');
+
 export const http = axios.create({
-  baseURL: '',
+  baseURL: apiBaseURL,
   timeout: 15000,
 });
 
