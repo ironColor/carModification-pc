@@ -55,6 +55,8 @@ export interface InspectionLog {
   artifactType?: string;
   artifactCode?: string;
   status?: string;
+  faceNum?: number;
+  holeNum?: number;
   detailList?: DetailMap | InspectionDetail[];
   createTime?: string;
   updateTime?: string;
@@ -88,3 +90,5 @@ export interface SystemState {
   algo?: boolean | string;
   [key: string]: unknown;
 }
+
+export type DashboardImageSlot = 'diameter' | 'depth' | 'thread';

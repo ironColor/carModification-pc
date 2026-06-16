@@ -81,8 +81,8 @@ const checks = [
       dashboard.includes('modelLoading') &&
       dashboard.includes('className="model-select"') &&
       dashboard.includes('<Select') &&
-      dashboard.includes('检测面<strong>{dashboardSnapshot.face}</strong>') &&
-      dashboard.includes('孔位<strong>{dashboardSnapshot.hole}</strong>'),
+      dashboard.includes('检测面<strong>{face}</strong>') &&
+      dashboard.includes('孔位<strong>{hole}</strong>'),
   },
   {
     name: 'model dropdown change calls the backend update endpoint',

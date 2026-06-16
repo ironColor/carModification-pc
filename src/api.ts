@@ -45,6 +45,19 @@ function unwrap<T>(result: ApiResult<T>): T {
   return result.data;
 }
 
+function unwrapOptional<T>(result: ApiResult<T> | T): T {
+  if (
+    result &&
+    typeof result === 'object' &&
+    'code' in result &&
+    'data' in result &&
+    typeof (result as ApiResult<T>).code === 'number'
+  ) {
+    return unwrap(result as ApiResult<T>);
+  }
+  return result as T;
+}
+
 export async function login(payload: LoginPayload) {
   const { data } = await http.post<ApiResult<Record<string, string>>>('/auth/login', payload);
   return unwrap(data);
@@ -77,6 +90,11 @@ export async function getHardwareSettings() {
   return unwrap(data) || {};
 }
 
+export async function getCurrentArtifactType() {
+  const { data } = await http.get<ApiResult<Record<string, string>> | Record<string, string>>('/api/getCurrentArtifactType');
+  return unwrapOptional(data) || {};
+}
+
 export async function startSoftware(startState: 'start' | 'end') {
   const { data } = await http.post<ApiResult<Record<string, string>>>('/api/start_software', {
     start_state: startState,
@@ -85,10 +103,10 @@ export async function startSoftware(startState: 'start' | 'end') {
 }
 
 export async function setArtifactType(artifactType: string) {
-  const { data } = await http.post<ApiResult<Record<string, string>>>('/api/setArtifactType', {
+  const { data } = await http.post<ApiResult<Record<string, string>> | Record<string, string>>('/api/setArtifactType', {
     artifactType,
   });
-  return unwrap(data);
+  return unwrapOptional(data);
 }
 
 export async function queryInspectionLogs(query: InspectionQuery, current: number, size: number) {
@@ -103,6 +121,20 @@ export async function getInspectionLog(id: number) {
     params: { id },
   });
   return unwrap(data);
+}
+
+export function getDashboardImageUrl(path: string) {
+  const query = new URLSearchParams({ path });
+  const baseURL = http.defaults.baseURL || '';
+  return `${baseURL}/api/inspection/artifactLog/image?${query.toString()}`;
+}
+
+export async function fetchDashboardImageObjectUrl(path: string) {
+  const response = await http.get<Blob>('/api/inspection/artifactLog/image', {
+    params: { path },
+    responseType: 'blob',
+  });
+  return URL.createObjectURL(response.data);
 }
 
 export async function deleteInspectionLog(id: number) {
