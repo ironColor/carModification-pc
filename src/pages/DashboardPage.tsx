@@ -1,8 +1,8 @@
-import { App as AntApp, Button, Image, Timeline } from 'antd';
+import { App as AntApp, Button, Image, Select, Timeline } from 'antd';
 import { PoweroffOutlined } from '@ant-design/icons';
-import { useState } from 'react';
-import { startSoftware } from '../api';
-import type { User } from '../types';
+import { useEffect, useState } from 'react';
+import { getDict, setArtifactType, startSoftware } from '../api';
+import type { DictOption, User } from '../types';
 
 interface DashboardPageProps {
   user: User | null;
@@ -54,10 +54,51 @@ const dashboardSnapshot = {
   ],
 };
 
+function buildModelOptions(options: DictOption[]) {
+  const filtered = options.filter((item) => item.dictValue);
+  if (filtered.some((item) => item.dictValue === dashboardSnapshot.model)) {
+    return filtered;
+  }
+  return [{ dictLabel: dashboardSnapshot.model, dictValue: dashboardSnapshot.model }, ...filtered];
+}
+
 export default function DashboardPage(_props: DashboardPageProps) {
   const [running, setRunning] = useState(false);
+  const [modelValue, setModelValue] = useState(dashboardSnapshot.model);
+  const [modelOptions, setModelOptions] = useState<DictOption[]>([
+    { dictLabel: dashboardSnapshot.model, dictValue: dashboardSnapshot.model },
+  ]);
+  const [modelLoading, setModelLoading] = useState(true);
+  const [modelSaving, setModelSaving] = useState(false);
   const { message } = AntApp.useApp();
   const onlineCount = dashboardSnapshot.statusRows.filter((item) => item.ok).length;
+
+  useEffect(() => {
+    let active = true;
+    getDict('artifactType')
+      .then((items) => {
+        if (!active) return;
+        const nextOptions = buildModelOptions(items);
+        setModelOptions(nextOptions);
+        setModelValue((current) =>
+          nextOptions.some((item) => item.dictValue === current)
+            ? current
+            : nextOptions[0]?.dictValue || dashboardSnapshot.model,
+        );
+      })
+      .catch(() => {
+        if (!active) return;
+        setModelOptions([{ dictLabel: dashboardSnapshot.model, dictValue: dashboardSnapshot.model }]);
+        setModelValue(dashboardSnapshot.model);
+      })
+      .finally(() => {
+        if (active) setModelLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function handleStart() {
     const nextRunning = !running;
@@ -67,6 +108,22 @@ export default function DashboardPage(_props: DashboardPageProps) {
       message.success(nextRunning ? '已发送启动命令' : '已发送停止命令');
     } catch (error) {
       message.error(error instanceof Error ? error.message : '启动接口调用失败');
+    }
+  }
+
+  async function handleModelChange(nextModel: string) {
+    if (nextModel === modelValue) return;
+    const previousModel = modelValue;
+    setModelValue(nextModel);
+    setModelSaving(true);
+    try {
+      await setArtifactType(nextModel);
+      message.success('型号已切换');
+    } catch (error) {
+      setModelValue(previousModel);
+      message.error(error instanceof Error ? error.message : '型号切换失败');
+    } finally {
+      setModelSaving(false);
     }
   }
 
@@ -112,7 +169,20 @@ export default function DashboardPage(_props: DashboardPageProps) {
             <div className="machine-top-grid">
               <div className="panel model-panel">
                 <span>型号：</span>
-                <strong>{dashboardSnapshot.model}</strong>
+                <Select
+                  className="model-select"
+                  aria-label="型号"
+                  showSearch
+                  disabled={modelSaving}
+                  loading={modelLoading || modelSaving}
+                  optionFilterProp="label"
+                  value={modelValue}
+                  options={modelOptions.map((item) => ({
+                    label: item.dictLabel,
+                    value: item.dictValue,
+                  }))}
+                  onChange={handleModelChange}
+                />
               </div>
 
               <div className="panel workpiece-panel">

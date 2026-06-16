@@ -84,6 +84,13 @@ export async function startSoftware(startState: 'start' | 'end') {
   return unwrap(data);
 }
 
+export async function setArtifactType(artifactType: string) {
+  const { data } = await http.post<ApiResult<Record<string, string>>>('/api/setArtifactType', {
+    artifactType,
+  });
+  return unwrap(data);
+}
+
 export async function queryInspectionLogs(query: InspectionQuery, current: number, size: number) {
   const { data } = await http.get<ApiResult<PageResult<InspectionLog>>>('/api/inspection/artifactLog/page', {
     params: { ...query, current, size },

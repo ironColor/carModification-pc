@@ -75,10 +75,21 @@ const checks = [
       !holeCellsBlock.includes('grid-template-columns'),
   },
   {
-    name: 'workpiece metadata removes duplicate model tile',
-    pass: !dashboard.includes('型号<strong>{dashboardSnapshot.model}</strong>') &&
+    name: 'model tile uses a dictionary-backed dropdown instead of static text',
+    pass: dashboard.includes("getDict('artifactType')") &&
+      dashboard.includes('buildModelOptions') &&
+      dashboard.includes('modelLoading') &&
+      dashboard.includes('className="model-select"') &&
+      dashboard.includes('<Select') &&
       dashboard.includes('检测面<strong>{dashboardSnapshot.face}</strong>') &&
       dashboard.includes('孔位<strong>{dashboardSnapshot.hole}</strong>'),
+  },
+  {
+    name: 'model dropdown change calls the backend update endpoint',
+    pass: dashboard.includes('setArtifactType') &&
+      dashboard.includes('handleModelChange') &&
+      dashboard.includes('modelSaving') &&
+      dashboard.includes('disabled={modelSaving}'),
   },
   {
     name: 'workpiece details are compact enough to fit but tall enough to read',

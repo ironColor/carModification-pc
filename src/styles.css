@@ -346,6 +346,7 @@ body {
   padding: 14px 20px;
   display: grid;
   align-content: center;
+  gap: 10px;
 }
 
 .model-panel span {
@@ -355,12 +356,49 @@ body {
   line-height: 1;
 }
 
-.model-panel strong {
+.model-select.ant-select {
+  width: 100%;
+}
+
+.model-select .ant-select-selector {
+  height: 84px !important;
+  padding: 0 18px !important;
+  border-radius: 8px !important;
+  border-color: #98a2b3 !important;
+  background: #f8fafc !important;
+  box-shadow: none !important;
+}
+
+.model-select .ant-select-selection-item,
+.model-select .ant-select-selection-placeholder {
+  height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #101828;
-  font-size: clamp(48px, 4.8vw, 70px);
+  font-size: clamp(40px, 4vw, 68px);
   font-weight: 900;
   line-height: 1;
-  text-align: center;
+}
+
+.model-select .ant-select-selection-placeholder {
+  color: #667085;
+}
+
+.model-select .ant-select-arrow {
+  inset-inline-end: 16px;
+  color: #475467;
+  font-size: 14px;
+}
+
+.model-select .ant-select-selection-search {
+  inset-inline: 18px;
+}
+
+.model-select .ant-select-selection-search-input {
+  height: 82px !important;
+  font-size: clamp(40px, 4vw, 68px);
+  font-weight: 900;
 }
 
 .workpiece-panel {
