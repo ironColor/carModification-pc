@@ -193,7 +193,7 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 330px;
   gap: 14px;
-  align-items: stretch;
+  align-items: start;
 }
 
 .machine-workspace {
@@ -230,7 +230,9 @@ body {
 .machine-right {
   min-width: 0;
   min-height: 0;
-  align-self: stretch;
+  height: calc(100vh - 148px);
+  max-height: calc(100vh - 148px);
+  align-self: start;
   display: grid;
   gap: 14px;
   grid-template-rows: 470px minmax(0, 1fr);

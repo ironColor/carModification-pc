@@ -241,7 +241,7 @@ export default function QueryPage({ user }: QueryPageProps) {
     }
     setExportingPdfId(record.id);
     try {
-      await exportInspectionPdf(record.id);
+      await exportInspectionPdf(record.id, record.artifactCode || String(record.id));
       message.success('PDF 导出成功');
     } catch (error) {
       if (!isApiErrorNotified(error)) {

@@ -238,12 +238,12 @@ export async function exportInspectionExcel(ids: string) {
   downloadBlob(response.data, '检测数据.xlsx');
 }
 
-export async function exportInspectionPdf(id: number) {
+export async function exportInspectionPdf(id: number, fileName: string) {
   const response = await http.post('/api/inspection/artifactLog/downloadPdf', null, {
     params: { id },
     responseType: 'blob',
   });
-  downloadBlob(response.data, `检测报告-${id}.pdf`);
+  downloadBlob(response.data, `${fileName}.pdf`);
 }
 
 export async function queryUsers(query: Partial<User>, current: number, size: number) {
