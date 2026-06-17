@@ -29,7 +29,7 @@ import {
   tokenFromLoginData,
   canManageSystem,
 } from './auth';
-import { getCurrentUser, login } from './api';
+import { getCurrentUser, login, setApiErrorNotifier } from './api';
 import type { User } from './types';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -45,6 +45,12 @@ function AppShell() {
   const [collapsed, setCollapsed] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const { message } = AntApp.useApp();
+
+  useEffect(() => {
+    setApiErrorNotifier((content) => message.error(content));
+    return () => setApiErrorNotifier();
+  }, [message]);
 
   useEffect(() => {
     clearPersistentStorage();

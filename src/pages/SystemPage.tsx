@@ -20,7 +20,7 @@ import {
 } from '@ant-design/icons';
 import { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { createUser, deleteUser, getDict, getSystemState, queryUsers, updateUser } from '../api';
+import { createUser, deleteUser, getDict, getSystemState, isApiErrorNotified, queryUsers, updateUser } from '../api';
 import { labelForRole, roleLevel } from '../auth';
 import type { DictOption, User } from '../types';
 
@@ -63,7 +63,9 @@ export default function SystemPage({ user }: SystemPageProps) {
       setCurrent(data.current || page);
       setSize(data.size || pageSize);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '用户查询失败');
+      if (!isApiErrorNotified(error)) {
+        message.error(error instanceof Error ? error.message : '用户查询失败');
+      }
     } finally {
       setLoading(false);
     }
@@ -88,15 +90,21 @@ export default function SystemPage({ user }: SystemPageProps) {
 
   async function submitUser() {
     const values = await userForm.validateFields();
-    if (editing?.id) {
-      await updateUser({ ...editing, ...values, id: editing.id });
-      message.success('用户已更新');
-    } else {
-      await createUser(values);
-      message.success('用户已新增');
+    try {
+      if (editing?.id) {
+        await updateUser({ ...editing, ...values, id: editing.id });
+        message.success('用户已更新');
+      } else {
+        await createUser(values);
+        message.success('用户已新增');
+      }
+      setModalOpen(false);
+      load();
+    } catch (error) {
+      if (!isApiErrorNotified(error)) {
+        message.error(error instanceof Error ? error.message : '保存失败');
+      }
     }
-    setModalOpen(false);
-    load();
   }
 
   function canDelete(record: User) {
@@ -111,9 +119,15 @@ export default function SystemPage({ user }: SystemPageProps) {
       Modal.warning({ title: '权限不足', content: '不可删除权限高于当前账户的用户，一级账户也不可删除自身账号。' });
       return;
     }
-    await deleteUser(record.id);
-    message.success('删除成功');
-    load();
+    try {
+      await deleteUser(record.id);
+      message.success('删除成功');
+      load();
+    } catch (error) {
+      if (!isApiErrorNotified(error)) {
+        message.error(error instanceof Error ? error.message : '删除失败');
+      }
+    }
   }
 
   async function handleCommunicationTest() {
@@ -136,7 +150,9 @@ export default function SystemPage({ user }: SystemPageProps) {
         message.success('通信测试正常');
       }
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '通信测试失败');
+      if (!isApiErrorNotified(error)) {
+        message.error(error instanceof Error ? error.message : '通信测试失败');
+      }
     } finally {
       setTesting(false);
     }

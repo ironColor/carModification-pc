@@ -33,7 +33,9 @@ import {
   exportInspectionExcel,
   exportInspectionPdf,
   getDict,
+  getInspectionImage,
   getInspectionLog,
+  isApiErrorNotified,
   queryInspectionLogs,
   updateInspectionLog,
 } from '../api';
@@ -57,6 +59,58 @@ function flattenDetails(log?: InspectionLog | null): InspectionDetail[] {
   return Object.values(log.detailList).flat();
 }
 
+function isInlineImageSource(path: string) {
+  return path.startsWith('data:image/') || path.startsWith('blob:');
+}
+
+function isFilledString(value?: string): value is string {
+  return Boolean(value);
+}
+
+function InspectionThumb({ path }: { path: string }) {
+  const [src, setSrc] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = '';
+
+    setSrc('');
+    setLoading(true);
+    setFailed(false);
+
+    if (isInlineImageSource(path)) {
+      setSrc(path);
+      setLoading(false);
+      return;
+    }
+
+    getInspectionImage(path)
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSrc(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [path]);
+
+  if (loading) return <div className="thumb-placeholder">加载中</div>;
+  if (failed || !src) return <div className="thumb-placeholder thumb-placeholder-error">加载失败</div>;
+
+  return <Image src={src} width={88} height={64} className="thumb-img" />;
+}
+
 export default function QueryPage({ user }: QueryPageProps) {
   const [form] = Form.useForm();
   const [rows, setRows] = useState<InspectionLog[]>([]);
@@ -68,6 +122,8 @@ export default function QueryPage({ user }: QueryPageProps) {
   const [artifactOptions, setArtifactOptions] = useState<DictOption[]>([]);
   const [detail, setDetail] = useState<InspectionLog | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPdfId, setExportingPdfId] = useState<number | null>(null);
   const { message } = AntApp.useApp();
 
   const canEdit = canMutateInspection(user);
@@ -94,7 +150,9 @@ export default function QueryPage({ user }: QueryPageProps) {
       setCurrent(pageResult.current || page);
       setSize(pageResult.size || pageSize);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '查询失败');
+      if (!isApiErrorNotified(error)) {
+        message.error(error instanceof Error ? error.message : '查询失败');
+      }
     } finally {
       setLoading(false);
     }
@@ -131,7 +189,9 @@ export default function QueryPage({ user }: QueryPageProps) {
     try {
       setDetail(await getInspectionLog(record.id));
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '详情获取失败');
+      if (!isApiErrorNotified(error)) {
+        message.error(error instanceof Error ? error.message : '详情获取失败');
+      }
     }
   }
 
@@ -153,11 +213,43 @@ export default function QueryPage({ user }: QueryPageProps) {
   }
 
   async function handleBatchExport() {
+    if (!canEdit) {
+      Modal.warning({ title: '权限不足', content: '当前账户无检测数据导出权限。' });
+      return;
+    }
     if (!selectedRowKeys.length) {
       message.warning('请选择要导出的数据');
       return;
     }
-    await exportInspectionExcel(selectedRowKeys.join(','));
+    setExportingExcel(true);
+    try {
+      await exportInspectionExcel(selectedRowKeys.join(','));
+      message.success('导出成功');
+    } catch (error) {
+      if (!isApiErrorNotified(error)) {
+        message.error(error instanceof Error ? error.message : '导出失败');
+      }
+    } finally {
+      setExportingExcel(false);
+    }
+  }
+
+  async function handlePdfExport(record: InspectionLog) {
+    if (!canEdit) {
+      Modal.warning({ title: '权限不足', content: '当前账户无检测数据导出权限。' });
+      return;
+    }
+    setExportingPdfId(record.id);
+    try {
+      await exportInspectionPdf(record.id);
+      message.success('PDF 导出成功');
+    } catch (error) {
+      if (!isApiErrorNotified(error)) {
+        message.error(error instanceof Error ? error.message : 'PDF 导出失败');
+      }
+    } finally {
+      setExportingPdfId(null);
+    }
   }
 
   const columns = useMemo<ColumnsType<InspectionLog>>(
@@ -202,9 +294,9 @@ export default function QueryPage({ user }: QueryPageProps) {
             {/*<Button icon={<EyeOutlined />} onClick={() => openDetail(record)}>*/}
             {/*  详情*/}
             {/*</Button>*/}
-            {/*<Button icon={<FilePdfOutlined />} onClick={() => exportInspectionPdf(record.id)}>*/}
-            {/*  PDF*/}
-            {/*</Button>*/}
+            <Button icon={<FilePdfOutlined />} loading={exportingPdfId === record.id} onClick={() => handlePdfExport(record)}>
+              PDF
+            </Button>
             <Button danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>
               删除
             </Button>
@@ -212,7 +304,7 @@ export default function QueryPage({ user }: QueryPageProps) {
         ),
       },
     ],
-    [canEdit],
+    [canEdit, exportingPdfId],
   );
 
   const details = flattenDetails(detail);
@@ -230,8 +322,8 @@ export default function QueryPage({ user }: QueryPageProps) {
           <Typography.Title level={2}>数据查询</Typography.Title>
         </div>
         <Space>
-          <Button icon={<FileExcelOutlined />} onClick={handleBatchExport}>
-            批量导出 Excel
+          <Button icon={<FileExcelOutlined />} loading={exportingExcel} onClick={handleBatchExport}>
+            导出Excel
           </Button>
           <Button icon={<DownloadOutlined />} onClick={() => load(1, size)}>
             刷新
@@ -240,18 +332,20 @@ export default function QueryPage({ user }: QueryPageProps) {
       </div>
 
       <Form form={form} layout="inline" className="query-form" onFinish={() => load(1, size)}>
-        <Form.Item name="artifactType" label="型号">
-          <Select
-            showSearch
-            allowClear
-            placeholder="请选择或输入型号"
-            options={artifactOptions.map((item) => ({ label: item.dictLabel, value: item.dictValue }))}
-            style={{ width: 190 }}
-          />
-        </Form.Item>
-        <Form.Item name="artifactCode" label="产品号">
-          <Input allowClear placeholder="支持模糊查询" style={{ width: 210 }} />
-        </Form.Item>
+        <div className="query-form-main">
+          <Form.Item name="artifactType" label="型号">
+            <Select
+              showSearch
+              allowClear
+              placeholder="请选择或输入型号"
+              options={artifactOptions.map((item) => ({ label: item.dictLabel, value: item.dictValue }))}
+              style={{ width: 190 }}
+            />
+          </Form.Item>
+          <Form.Item name="artifactCode" label="产品号">
+            <Input allowClear placeholder="支持模糊查询" style={{ width: 210 }} />
+          </Form.Item>
+        </div>
         <Collapse
           ghost
           className="inline-collapse"
@@ -337,8 +431,8 @@ export default function QueryPage({ user }: QueryPageProps) {
                       <Descriptions.Item label="有无螺纹">{item.hasThread || '-'}</Descriptions.Item>
                     </Descriptions>
                     <div className="thumb-row">
-                      {[item.threadImg, item.diameterImg, item.depthImg].filter(Boolean).map((src) => (
-                        <Image key={src} src={src} width={88} height={64} className="thumb-img" />
+                      {[item.threadImg, item.diameterImg, item.depthImg].filter(isFilledString).map((path) => (
+                        <InspectionThumb key={path} path={path} />
                       ))}
                     </div>
                   </div>

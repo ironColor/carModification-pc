@@ -6,6 +6,7 @@ import {
   getDict,
   getHardwareSettings,
   getSystemState,
+  isApiErrorNotified,
   setArtifactType,
   startSoftware,
 } from '../api';
@@ -309,6 +310,24 @@ function applyHoleResult(rows: HoleRow[], payload: unknown) {
   return nextRows.sort((left, right) => left.label.localeCompare(right.label));
 }
 
+function createInitialStats(): StatItem[] {
+  return dashboardSnapshot.stats.map((item) => ({ ...item }));
+}
+
+function createInitialHoleRows(): HoleRow[] {
+  const rows: HoleRow[] = dashboardSnapshot.holeRows;
+  return rows.map((row) => ({ ...row, cells: [...row.cells] }));
+}
+
+function createInitialLogItems(): LogItem[] {
+  const items: LogItem[] = dashboardSnapshot.logItems;
+  return items.map((item) => ({ ...item }));
+}
+
+function createInitialImageCards(): ImageCard[] {
+  return dashboardSnapshot.imageCards.map((item) => ({ ...item }));
+}
+
 export default function DashboardPage(_props: DashboardPageProps) {
   const [running, setRunning] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
@@ -323,13 +342,24 @@ export default function DashboardPage(_props: DashboardPageProps) {
   const [face, setFace] = useState<number | undefined>(dashboardSnapshot.face);
   const [hole, setHole] = useState<number | undefined>(dashboardSnapshot.hole);
   const [alarmType, setAlarmType] = useState<string | undefined>(dashboardSnapshot.alarmType);
-  const [stats, setStats] = useState<StatItem[]>(dashboardSnapshot.stats);
-  const [holeRows, setHoleRows] = useState<HoleRow[]>(dashboardSnapshot.holeRows);
-  const [logItems, setLogItems] = useState<LogItem[]>(dashboardSnapshot.logItems);
-  const [imageCards, setImageCards] = useState<ImageCard[]>(dashboardSnapshot.imageCards);
+  const [stats, setStats] = useState<StatItem[]>(createInitialStats);
+  const [holeRows, setHoleRows] = useState<HoleRow[]>(createInitialHoleRows);
+  const [logItems, setLogItems] = useState<LogItem[]>(createInitialLogItems);
+  const [imageCards, setImageCards] = useState<ImageCard[]>(createInitialImageCards);
   const { message } = AntApp.useApp();
 
   const onlineCount = useMemo(() => statusRows.filter((item) => item.ok).length, [statusRows]);
+
+  const resetDashboardInspectionData = useCallback(() => {
+    setWorkpiece(dashboardSnapshot.workpiece);
+    setFace(dashboardSnapshot.face);
+    setHole(dashboardSnapshot.hole);
+    setAlarmType(dashboardSnapshot.alarmType);
+    setStats(createInitialStats());
+    setHoleRows(createInitialHoleRows());
+    setLogItems(createInitialLogItems());
+    setImageCards(createInitialImageCards());
+  }, []);
 
   const updateModelValue = useCallback((nextModel: string) => {
     if (!nextModel) return;
@@ -480,9 +510,14 @@ export default function DashboardPage(_props: DashboardPageProps) {
     try {
       await startSoftware(nextRunning ? 'start' : 'end');
       setRunning(nextRunning);
+      if (!nextRunning) {
+        resetDashboardInspectionData();
+      }
       message.success(nextRunning ? '已发送启动命令' : '已发送停止命令');
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '启动接口调用失败');
+      if (!isApiErrorNotified(error)) {
+        message.error(error instanceof Error ? error.message : '启动接口调用失败');
+      }
     }
   }
 
@@ -496,7 +531,9 @@ export default function DashboardPage(_props: DashboardPageProps) {
       message.success('型号已切换');
     } catch (error) {
       setModelValue(previousModel);
-      message.error(error instanceof Error ? error.message : '型号切换失败');
+      if (!isApiErrorNotified(error)) {
+        message.error(error instanceof Error ? error.message : '型号切换失败');
+      }
     } finally {
       setModelSaving(false);
     }

@@ -1,6 +1,7 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Button, Card, Form, Input, Typography, App as AntApp } from 'antd';
 import { useState } from 'react';
+import { isApiErrorNotified } from '../api';
 
 interface LoginPageProps {
   onSubmit: (values: { username: string; password: string }) => Promise<void>;
@@ -15,7 +16,9 @@ export default function LoginPage({ onSubmit }: LoginPageProps) {
     try {
       await onSubmit(values);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '登录失败');
+      if (!isApiErrorNotified(error)) {
+        message.error(error instanceof Error ? error.message : '登录失败');
+      }
     } finally {
       setLoading(false);
     }
