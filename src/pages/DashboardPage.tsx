@@ -1,8 +1,7 @@
 import { App as AntApp, Button, Image, Select, Timeline } from 'antd';
 import { PoweroffOutlined } from '@ant-design/icons';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  fetchDashboardImageObjectUrl,
   getCurrentArtifactType,
   getDict,
   getHardwareSettings,
@@ -44,8 +43,6 @@ interface ImageCard {
   label: string;
   result: string;
   src: string;
-  path?: string;
-  loading?: boolean;
 }
 
 interface DashboardSocketEnvelope {
@@ -57,7 +54,6 @@ interface DashboardSocketEnvelope {
   [key: string]: unknown;
 }
 
-const MAX_LOG_ITEMS = 80;
 const IMAGE_DATA_PREFIX = ['data', 'image'].join(':');
 
 const dashboardSnapshot = {
@@ -88,9 +84,9 @@ const dashboardSnapshot = {
 
   ],
   imageCards: [
-    { key: 'diameter', label: '孔直径检测图', result: '孔直径检测图', src: '' },
-    { key: 'depth', label: '孔深度检测图', result: '孔深度检测图', src: '' },
-    { key: 'thread', label: '螺纹检测图', result: '螺纹检测图', src: '' },
+    { key: 'diameter', label: '', result: '', src: '' },
+    { key: 'depth', label: '', result: '', src: '' },
+    { key: 'thread', label: '', result: '', src: '' },
   ] satisfies ImageCard[],
 };
 
@@ -188,15 +184,25 @@ function logColor(payload: unknown) {
   return '#1677ff';
 }
 
+function trimLogBrackets(value: string) {
+  const text = value.trim();
+  if (text.startsWith('[') && text.endsWith(']')) return text.slice(1, -1).trim();
+  return text;
+}
+
+function extractLogSegments(value: string) {
+  const segments = Array.from(value.matchAll(/\[([^\]]*)\]/g), (match) => trimLogBrackets(match[0])).filter(Boolean);
+  if (segments.length) return segments.slice(-2).join(' ');
+  return trimLogBrackets(value);
+}
+
 function logText(payload: unknown) {
-  if (typeof payload === 'string') return payload;
+  if (typeof payload === 'string') return extractLogSegments(payload);
   const record = toRecord(payload);
-  if (!record) return formatValue(payload);
-  const sender = formatValue(record.sender, '');
-  const level = formatValue(record.level, '');
-  const info = formatValue(record.info ?? record.message ?? record.log, '');
-  const time = formatValue(record.time ?? record.createTime, '');
-  return [sender, level, info, time].filter(Boolean).join(' ');
+  if (!record) return extractLogSegments(formatValue(payload));
+  const info = extractLogSegments(formatValue(record.info ?? record.message ?? record.log, ''));
+  const time = trimLogBrackets(formatValue(record.time ?? record.createTime, ''));
+  return [info, time].filter(Boolean).join(' ');
 }
 
 function normalizeHoleCell(value: unknown): HoleCell {
@@ -270,12 +276,17 @@ function imageIndex(eventName: string) {
   return -1;
 }
 
-function extractImagePath(payload: unknown) {
-  const directValue = typeof payload === 'string' ? payload : '';
+function normalizeImageSource(payload: unknown) {
   const record = toRecord(payload);
-  const value = directValue || formatValue(record?.path ?? record?.filePath ?? record?.url ?? record?.imagePath, '');
-  if (!value || value.startsWith(IMAGE_DATA_PREFIX)) return '';
-  return value;
+  const value = typeof payload === 'string' ? payload : formatValue(record?.image ?? record?.src ?? record?.data ?? record?.payload ?? record?.value, '');
+  if (!value) return '';
+  if (value.startsWith(IMAGE_DATA_PREFIX)) return value;
+  return `data:image/png;base64,${value}`;
+}
+
+function sensorValue(payload: unknown) {
+  const record = toRecord(payload);
+  return formatValue(record?.value ?? record?.payload ?? record?.data ?? payload, '');
 }
 
 function applyHoleResult(rows: HoleRow[], payload: unknown) {
@@ -316,8 +327,6 @@ export default function DashboardPage(_props: DashboardPageProps) {
   const [holeRows, setHoleRows] = useState<HoleRow[]>(dashboardSnapshot.holeRows);
   const [logItems, setLogItems] = useState<LogItem[]>(dashboardSnapshot.logItems);
   const [imageCards, setImageCards] = useState<ImageCard[]>(dashboardSnapshot.imageCards);
-  const objectUrlsRef = useRef<string[]>([]);
-  const aliveRef = useRef(true);
   const { message } = AntApp.useApp();
 
   const onlineCount = useMemo(() => statusRows.filter((item) => item.ok).length, [statusRows]);
@@ -329,40 +338,8 @@ export default function DashboardPage(_props: DashboardPageProps) {
   }, []);
 
   const prependLog = useCallback((item: LogItem) => {
-    setLogItems((current) => [item, ...current].slice(0, MAX_LOG_ITEMS));
+    setLogItems((current) => [item, ...current]);
   }, []);
-
-  const loadImageFromPath = useCallback(
-    async (index: number, path: string) => {
-      if (index < 0 || !path) return;
-      setImageCards((current) =>
-        current.map((item, itemIndex) => (itemIndex === index ? { ...item, path, loading: true } : item)),
-      );
-
-      try {
-        const objectUrl = await fetchDashboardImageObjectUrl(path);
-        if (!aliveRef.current) {
-          URL.revokeObjectURL(objectUrl);
-          return;
-        }
-
-        const previousUrl = objectUrlsRef.current[index];
-        if (previousUrl) URL.revokeObjectURL(previousUrl);
-        objectUrlsRef.current[index] = objectUrl;
-
-        setImageCards((current) =>
-          current.map((item, itemIndex) =>
-            itemIndex === index ? { ...item, src: objectUrl, path, loading: false } : item,
-          ),
-        );
-      } catch {
-        setImageCards((current) =>
-          current.map((item, itemIndex) => (itemIndex === index ? { ...item, src: '', path, loading: false } : item)),
-        );
-      }
-    },
-    [],
-  );
 
   const handleDashboardSocketMessage = useCallback(
     (rawData: unknown) => {
@@ -414,7 +391,7 @@ export default function DashboardPage(_props: DashboardPageProps) {
 
       if (eventName === 'sendSensorData' || eventName.startsWith('sensor-send-data-')) {
         const index = sensorImageIndex(eventName, payload);
-        const value = formatValue(toRecord(payload)?.value ?? payload, '');
+        const value = sensorValue(payload);
         if (index >= 0 && value) {
           setImageCards((current) =>
             current.map((item, itemIndex) => (itemIndex === index ? { ...item, result: value } : item)),
@@ -425,17 +402,18 @@ export default function DashboardPage(_props: DashboardPageProps) {
 
       const currentImageIndex = imageIndex(eventName);
       if (currentImageIndex >= 0) {
-        const path = extractImagePath(payload);
-        if (path) {
-          void loadImageFromPath(currentImageIndex, path);
+        const imageSource = normalizeImageSource(payload);
+        if (imageSource) {
+          setImageCards((current) =>
+            current.map((item, itemIndex) => (itemIndex === currentImageIndex ? { ...item, src: imageSource } : item)),
+          );
         }
       }
     },
-    [loadImageFromPath, prependLog, updateModelValue],
+    [prependLog, updateModelValue],
   );
 
   useEffect(() => {
-    aliveRef.current = true;
     let active = true;
 
     async function bootstrapDashboard() {
@@ -481,11 +459,6 @@ export default function DashboardPage(_props: DashboardPageProps) {
 
     return () => {
       active = false;
-      aliveRef.current = false;
-      objectUrlsRef.current.forEach((url) => {
-        if (url) URL.revokeObjectURL(url);
-      });
-      objectUrlsRef.current = [];
     };
   }, []);
 
@@ -638,7 +611,7 @@ export default function DashboardPage(_props: DashboardPageProps) {
                   ) : (
                     <div className="image-placeholder">
                       <span className="placeholder-icon">▧</span>
-                      <span>{item.loading ? '图像加载中' : '暂无图像'}</span>
+                      <span>暂无图像</span>
                     </div>
                   )}
                 </div>
@@ -669,12 +642,14 @@ export default function DashboardPage(_props: DashboardPageProps) {
             <div className="panel-title-row">
               <span>运行日志</span>
             </div>
-            <Timeline
-              items={logItems.map((item) => ({
-                color: item.color,
-                children: item.text,
-              }))}
-            />
+            <div className="log-scroll">
+              <Timeline
+                items={logItems.map((item) => ({
+                  color: item.color,
+                  children: item.text,
+                }))}
+              />
+            </div>
           </div>
         </aside>
       </div>

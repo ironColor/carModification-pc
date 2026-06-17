@@ -30,6 +30,9 @@ const runCardBlock = cssBlock('.dashboard-run-card');
 const imageGroupBlock = cssBlock('.machine-image-group');
 const holeCellsBlock = cssBlock('.hole-row-cells');
 const holePillBlock = cssBlock('.hole-pill');
+const logPanelBlock = cssBlock('.log-panel');
+const logScrollBlock = cssBlock('.log-scroll');
+const logContentBlock = cssBlock('.log-panel .ant-timeline-item-content');
 
 const checks = [
   {
@@ -110,6 +113,24 @@ const checks = [
     name: 'dashboard vertical sizing keeps image results visible in one viewport',
     pass: runCardBlock.includes('min-height: 120px') &&
       imageGroupBlock.includes('grid-template-rows: minmax(320px, 1fr) 72px'),
+  },
+  {
+    name: '运行日志每条只展示后两个括号段且不保留方括号',
+    pass: dashboard.includes('extractLogSegments') &&
+      dashboard.includes('.slice(-2)') &&
+      dashboard.includes(".join(' ')") &&
+      dashboard.includes('trimLogBrackets'),
+  },
+  {
+    name: '运行日志不再限制消息数量',
+    pass: !dashboard.includes('MAX_LOG_ITEMS') && !dashboard.includes('.slice(0, MAX_LOG_ITEMS)'),
+  },
+  {
+    name: '运行日志内容区域可独立滚动并容纳超长文本',
+    pass: dashboard.includes('className="log-scroll"') &&
+      logPanelBlock.includes('overflow: hidden') &&
+      logScrollBlock.includes('overflow: auto') &&
+      logContentBlock.includes('overflow-wrap: anywhere'),
   },
 ];
 

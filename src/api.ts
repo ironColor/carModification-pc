@@ -123,20 +123,6 @@ export async function getInspectionLog(id: number) {
   return unwrap(data);
 }
 
-export function getDashboardImageUrl(path: string) {
-  const query = new URLSearchParams({ path });
-  const baseURL = http.defaults.baseURL || '';
-  return `${baseURL}/api/inspection/artifactLog/image?${query.toString()}`;
-}
-
-export async function fetchDashboardImageObjectUrl(path: string) {
-  const response = await http.get<Blob>('/api/inspection/artifactLog/image', {
-    params: { path },
-    responseType: 'blob',
-  });
-  return URL.createObjectURL(response.data);
-}
-
 export async function deleteInspectionLog(id: number) {
   const { data } = await http.get<ApiResult<boolean>>('/api/inspection/artifactLog/del', {
     params: { id },

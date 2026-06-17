@@ -602,10 +602,17 @@ body {
 .log-panel {
   min-height: 0;
   padding: 18px 18px 8px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.log-scroll {
+  min-height: 0;
   overflow: auto;
 }
 
-.log-panel .ant-timeline {
+.log-scroll .ant-timeline {
   margin-top: 18px;
 }
 
@@ -616,6 +623,7 @@ body {
 .log-panel .ant-timeline-item-content {
   color: #475467;
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 1560px) {
