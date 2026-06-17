@@ -228,9 +228,13 @@ body {
 
 .machine-right {
   min-width: 0;
+  min-height: 0;
+  height: calc(100vh - 148px);
+  max-height: calc(100vh - 148px);
   display: grid;
   gap: 14px;
-  grid-template-rows: 470px 1fr;
+  grid-template-rows: 470px minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .panel {
@@ -609,7 +613,8 @@ body {
 
 .log-scroll {
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .log-scroll .ant-timeline {
