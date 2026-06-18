@@ -16,7 +16,7 @@ import {
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { BrowserRouter } from 'react-router-dom';
 import {
@@ -29,7 +29,7 @@ import {
   tokenFromLoginData,
   canManageSystem,
 } from './auth';
-import { getCurrentUser, login, setApiErrorNotifier } from './api';
+import { getCurrentUser, login, setApiErrorNotifier, setApiUnauthorizedHandler } from './api';
 import type { User } from './types';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -47,10 +47,22 @@ function AppShell() {
   const location = useLocation();
   const { message } = AntApp.useApp();
 
+  const redirectToLogin = useCallback(() => {
+    clearSession();
+    setToken(null);
+    setUser(null);
+    navigate('/login', { replace: true });
+  }, [navigate]);
+
   useEffect(() => {
     setApiErrorNotifier((content) => message.error(content));
     return () => setApiErrorNotifier();
   }, [message]);
+
+  useEffect(() => {
+    setApiUnauthorizedHandler(redirectToLogin);
+    return () => setApiUnauthorizedHandler();
+  }, [redirectToLogin]);
 
   useEffect(() => {
     clearPersistentStorage();
@@ -72,12 +84,10 @@ function AppShell() {
         saveSession(token, nextUser);
       })
       .catch(() => {
-        clearSession();
-        setToken(null);
-        setUser(null);
+        redirectToLogin();
       })
       .finally(() => setBooting(false));
-  }, [token]);
+  }, [redirectToLogin, token]);
 
   const menuItems = useMemo(() => {
     const items = [

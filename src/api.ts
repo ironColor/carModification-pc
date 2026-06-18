@@ -17,13 +17,16 @@ export const USER_KEY = 'xy-inspection-user';
 const PRODUCTION_API_BASE_URL = 'http://127.0.0.1:8081';
 const apiBaseURL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? PRODUCTION_API_BASE_URL : '');
 const API_SUCCESS_CODE = 200;
+const LOGIN_EXPIRED_CODE = 403;
 const MAX_JSON_BLOB_SIZE = 1024 * 1024;
 
 type ApiErrorNotifier = (content: string) => void;
+type ApiUnauthorizedHandler = () => void;
 
 let apiErrorNotifier: ApiErrorNotifier = (content) => {
   antdMessage.error(content);
 };
+let apiUnauthorizedHandler: ApiUnauthorizedHandler = () => {};
 
 export function setApiErrorNotifier(notifier?: ApiErrorNotifier) {
   apiErrorNotifier =
@@ -31,6 +34,10 @@ export function setApiErrorNotifier(notifier?: ApiErrorNotifier) {
     ((content) => {
       antdMessage.error(content);
     });
+}
+
+export function setApiUnauthorizedHandler(handler?: ApiUnauthorizedHandler) {
+  apiUnauthorizedHandler = handler || (() => {});
 }
 
 export function isApiErrorNotified(error: unknown) {
@@ -57,6 +64,10 @@ function isApiResultLike(value: unknown): value is ApiResult<unknown> {
 function getApiResultErrorMessage(result: ApiResult<unknown>) {
   if (result.code === API_SUCCESS_CODE || result.code === 0) return '';
   return result.msg || '接口返回异常';
+}
+
+function isLoginExpiredResponse(response?: AxiosResponse) {
+  return response?.status === LOGIN_EXPIRED_CODE;
 }
 
 async function parseBlobApiResult(blob: Blob, headers: AxiosResponse['headers']) {
@@ -90,6 +101,23 @@ async function extractResponseApiErrorMessage(response: AxiosResponse) {
   return '';
 }
 
+async function isLoginExpiredApiResult(response: AxiosResponse) {
+  const data = response.data;
+  const payload =
+    typeof Blob !== 'undefined' && data instanceof Blob ? await parseBlobApiResult(data, response.headers) : data;
+
+  return isApiResultLike(payload) && payload.code === LOGIN_EXPIRED_CODE;
+}
+
+async function handleLoginExpired(response?: AxiosResponse) {
+  if (!response) return false;
+  const loginExpired = isLoginExpiredResponse(response) || (await isLoginExpiredApiResult(response));
+  if (loginExpired) {
+    apiUnauthorizedHandler();
+  }
+  return loginExpired;
+}
+
 async function extractRequestErrorMessage(error: unknown) {
   const response = (error as { response?: AxiosResponse })?.response;
   if (response) {
@@ -121,11 +149,13 @@ http.interceptors.response.use(
   async (response) => {
     const apiErrorMessage = await extractResponseApiErrorMessage(response);
     if (apiErrorMessage) {
+      await handleLoginExpired(response);
       return Promise.reject(notifyApiError(apiErrorMessage));
     }
     return response;
   },
   async (error) => {
+    await handleLoginExpired((error as { response?: AxiosResponse })?.response);
     const message = await extractRequestErrorMessage(error);
     return Promise.reject(notifyApiError(message));
   },
