@@ -1,6 +1,6 @@
 import { App as AntApp, Button, Image, Select, Timeline } from 'antd';
 import { PoweroffOutlined } from '@ant-design/icons';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getCurrentArtifactType,
   getDict,
@@ -44,6 +44,11 @@ interface ImageCard {
   label: string;
   result: string;
   src: string;
+}
+
+interface HoleResultContext {
+  face: string;
+  hole: string;
 }
 
 interface DashboardSocketEnvelope {
@@ -290,6 +295,22 @@ function sensorValue(payload: unknown) {
   return formatValue(record?.value ?? record?.payload ?? record?.data ?? payload, '');
 }
 
+function buildHoleResultContext(payload: unknown): HoleResultContext | null {
+  const record = toRecord(payload);
+  if (!record) return null;
+
+  const face = formatValue(record.face ?? record.faceName, '');
+  const hole = formatValue(record.hole ?? record.holeNum ?? record.index, '');
+  if (!face || !hole) return null;
+
+  return { face, hole };
+}
+
+function hasHoleResultContextChanged(previous: HoleResultContext | null, next: HoleResultContext | null) {
+  if (!previous || !next) return false;
+  return previous.face !== next.face || previous.hole !== next.hole;
+}
+
 function applyHoleResult(rows: HoleRow[], payload: unknown) {
   const record = toRecord(payload);
   if (!record) return rows;
@@ -346,11 +367,13 @@ export default function DashboardPage(_props: DashboardPageProps) {
   const [holeRows, setHoleRows] = useState<HoleRow[]>(createInitialHoleRows);
   const [logItems, setLogItems] = useState<LogItem[]>(createInitialLogItems);
   const [imageCards, setImageCards] = useState<ImageCard[]>(createInitialImageCards);
+  const lastHoleResultContextRef = useRef<HoleResultContext | null>(null);
   const { message } = AntApp.useApp();
 
   const onlineCount = useMemo(() => statusRows.filter((item) => item.ok).length, [statusRows]);
 
   const resetDashboardInspectionData = useCallback(() => {
+    lastHoleResultContextRef.current = null;
     setWorkpiece(dashboardSnapshot.workpiece);
     setFace(dashboardSnapshot.face);
     setHole(dashboardSnapshot.hole);
@@ -403,6 +426,13 @@ export default function DashboardPage(_props: DashboardPageProps) {
 
       if (eventName === 'hole_final_result' || eventName === 'sendHoleResult') {
         const record = toRecord(payload);
+        const nextHoleResultContext = buildHoleResultContext(payload);
+        if (hasHoleResultContextChanged(lastHoleResultContextRef.current, nextHoleResultContext)) {
+          setImageCards(createInitialImageCards());
+        }
+        if (nextHoleResultContext) {
+          lastHoleResultContextRef.current = nextHoleResultContext;
+        }
         const result = formatValue(record?.final_result ?? record?.result ?? record?.warnType, '');
         if (result) setAlarmType(result);
         setHoleRows((current) => applyHoleResult(current, payload));

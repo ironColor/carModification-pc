@@ -393,6 +393,7 @@ export default function QueryPage({ user }: QueryPageProps) {
           pageSize: size,
           total,
           showSizeChanger: true,
+          pageSizeOptions: ['10', '20', '50', '100', '500', '1000'],
           showTotal: (value) => `共 ${value} 条`,
           onChange: (page, pageSize) => load(page, pageSize),
         }}
